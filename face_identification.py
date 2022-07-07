@@ -1,6 +1,7 @@
 from face_identification import FaceIdentificaion
 
-dataset_path = input("Enter full path of the dataset: ")
+dataset_path = input("\nEnter full path of the dataset: ")
 
 obj = FaceIdentificaion()
 user_name = obj.face_recognition(dataset_path)
+print(f"Welcome {user_name}")

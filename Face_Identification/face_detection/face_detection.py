@@ -26,49 +26,55 @@ class FaceDetection:
     def load_model(self):
         """
         Info : Load OpenCV CAFFE Model.
-        
+
         :return: model
         """
-        prototxt = r"face_identification\model\deploy.prototxt"
-        model = r"face_identification\model\res10_300x300_ssd_iter_140000.caffemodel"
-        detector = cv2.dnn.readNetFromCaffe(prototxt, model)
-
-        return detector
+        try:
+            prototxt = r"face_identification\model\deploy.prototxt"
+            model = r"face_identification\model\res10_300x300_ssd_iter_140000.caffemodel"
+            detector = cv2.dnn.readNetFromCaffe(prototxt, model)
+            return detector
+        except Exception as e:
+            print('\nERROR: CaffeModel not found.\n', e)
 
     def detect_face(self, image):
         """
         Info : Detect face from image.
         """
-        detector = self.load_model()
-        original_size = image.shape
-        target_size = (self.height, self.width)
-        image = cv2.resize(image, target_size)
-        aspect_ratio_x = original_size[1] / target_size[1]
-        aspect_ratio_y = original_size[0] / target_size[0]
-        imageBlob = cv2.dnn.blobFromImage(image=image)
-        detector.setInput(imageBlob)
-        detections = detector.forward()
+        try:
+            detector = self.load_model()
+            original_size = image.shape
+            target_size = (self.height, self.width)
+            image = cv2.resize(image, target_size)
+            aspect_ratio_x = original_size[1] / target_size[1]
+            aspect_ratio_y = original_size[0] / target_size[0]
+            imageBlob = cv2.dnn.blobFromImage(image=image)
+            detector.setInput(imageBlob)
+            detections = detector.forward()
 
-        return detections, aspect_ratio_x, aspect_ratio_y
+            return detections, aspect_ratio_x, aspect_ratio_y
+        except Exception as e:
+            print('\nERROR: ', e)
 
-    def save_and_show(self, count, image):
+    def save_image(self, count, user_name, image):
         """
-        Info : Show and save detected person images.
+        Info : Save detected person images.
         """
         try:
-            print(
-                f'Generated {self.dataset_path}\\face_{self.user_name}_{count}.jpg')
             image = cv2.resize(image, (self.width, self.height))
-            cv2.imshow('image', image)
+            path = f"{self.dataset_path}\\{user_name}\\"
+            if not os.path.exists(path):
+                os.makedirs(path)
             cv2.imwrite(
-                f"{self.dataset_path}\\face_{self.user_name}_{str(count)}.jpg", image)
+                f"{path}\\face_{user_name}_{str(count)}.jpg", image)
+            print(f"{path}\\face_{user_name}_{str(count)}.jpg")
             count += 1
 
             return count
         except Exception as e:
-            print(e)
+            print('\nERROR: Image size is too small.\n', e)
 
-    def generate_face_data(self, count, image):
+    def generate_face_data(self, count, user_name, image):
         base_img = image.copy()
         detections, aspect_ratio_x, aspect_ratio_y = self.detect_face(
             image=image)
@@ -93,28 +99,16 @@ class FaceDetection:
                 right = int(instance["right"] * 300)
                 top = int(instance["top"] * 300)
 
-                # draw rectangle to main image
-                cv2.rectangle(
-                    image,
-                    (int(left * aspect_ratio_x),
-                        int(top * aspect_ratio_y)),
-                    (int(right * aspect_ratio_x),
-                        int(bottom * aspect_ratio_y)),
-                    (255, 0, 0),
-                    2,
-                )
-
                 if len(detections_df) != 0:
                     detected_face = base_img[
                         int(top * aspect_ratio_y) - 100: int(bottom * aspect_ratio_y) + 100,
                         int(left * aspect_ratio_x) - 100: int(right * aspect_ratio_x) + 100,
                     ]
-                    count = self.save_and_show(count, detected_face)
-            cv2.imshow("img", image)
+                    count = self.save_image(count, user_name, detected_face)
 
             return count
         except Exception as e:
-            print(e)
+            print("\nERROR :", e)
 
     def generate_face_data_from_webcam(self):
         """
@@ -131,7 +125,7 @@ class FaceDetection:
 
             while True:
                 _, image = cap.read()
-                count = self.generate_face_data(count, image)
+                count = self.generate_face_data(count, self.user_name, image)
                 if count == self.no_of_samples:
                     break
                 # Stop if 'q' key is pressed
@@ -143,7 +137,7 @@ class FaceDetection:
             cap.release()
             cv2.destroyAllWindows()
         except Exception as e:
-            print(e)
+            print("\nERROR :", e)
         finally:
             cap.release()
             cv2.destroyAllWindows()
@@ -156,33 +150,35 @@ class FaceDetection:
         INFO : Make sure every image have only one person in it.
         """
         try:
-            image_file_path = []
+            image_file_paths = []
             count = 0
 
             # check passed db folder exists
             if os.path.isdir(src_images_path) == True:
-                for r, d, f in os.walk(src_images_path):  # r=root, d=directories, f = files
+                # r=root, d=directories, f = files
+                for r, d, f in os.walk(src_images_path):
                     for file in f:
                         if ".jpg" in file:
                             # exact_path = os.path.join(r, file)
-                            exact_path = r + "/" + file
-                            image_file_path.append(exact_path)
-                print("Images Collected")
+                            exact_path = r + "\\" + file
+                            image_file_paths.append(exact_path)
+                print("\nImages Collected\n")
 
-            num_of_images = len(image_file_path)
+            num_of_images = len(image_file_paths)
 
             if num_of_images == 0:
                 print(
                     f"WARNING: There is no image in this path {src_images_path}. Face data will not be generated."
                 )
                 exit
-            for j, image_path in enumerate(image_file_path):
+            for i, image_path in enumerate(image_file_paths):
                 image = cv2.imread(image_path)
-                count = self.generate_face_data(count,image)
+                print("I", i)
+                count = self.generate_face_data(
+                    i, image_path.split("\\")[-2], image)
+
         except Exception as e:
-            print(e)
-        finally:
-            exit
+            print("\nERROR :", e)
 
 
 if __name__ == '__main__':
