@@ -1,5 +1,5 @@
-from face_identification.face_detection import face_detection
-from face_identification.face_recognition import face_recognition
+from Face_Identification.face_detection import face_detection
+from Face_Identification.face_recognition import face_recognition
 
 
 class FaceIdentificaion():

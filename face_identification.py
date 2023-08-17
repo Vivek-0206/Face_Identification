@@ -1,4 +1,4 @@
-from face_identification import FaceIdentificaion
+from Face_Identification import FaceIdentificaion
 
 dataset_path = input("\nEnter full path of the dataset: ")
 

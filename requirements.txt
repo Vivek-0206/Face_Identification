@@ -1,7 +1,6 @@
-tensorflow==2.8.1
+tensorflow
 pillow
 matplotlib
 numpy
 pandas
 opencv-python
-
